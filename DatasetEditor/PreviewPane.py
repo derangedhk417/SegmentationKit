@@ -14,6 +14,7 @@ from kivy.uix.scrollview   import ScrollView
 
 from Dataset         import Dataset
 from CustomBoxLayout import CustomBoxLayout
+from ImageDisplay    import ImageDisplay
 
 import numpy as np
 
@@ -43,20 +44,22 @@ class PreviewPane(CustomBoxLayout):
 		self.scroll_view.add_widget(self.layout)
 		self.add_widget(self.scroll_view)
 
+		self.current_selected_obj = None
+
 		self.bind(size=self._update_size)
 
 	def _update_size(self, instance, value):
 		self.scroll_view.height = self.height
-		print(self.height)
 
 	def getCorrectImageWidth(self):
 		return self.size[0] - 22
 
 	# This loads thumbnails from a dataset and displays them inside itself.
 	def loadThumbnails(self, dataset):
+		self.dataset = dataset
 		for k, v in dataset.thumbnails.items():
 			pt = PreviewThumbnail(
-				dataset, k,
+				dataset, k, self,
 				orientation='vertical',
 				color=(0.2, 0.2, 0.2, 1),
 				border=(1, 1, 1, 1),
@@ -67,9 +70,25 @@ class PreviewPane(CustomBoxLayout):
 			)
 			self.layout.add_widget(pt)
 
+	def setSelected(self, inst, key):
+		if self.current_selected_obj is not None:
+			self.current_selected_obj.changeBorderColor(None)
+		self.current_selected_key = key
+		self.current_selected_obj = inst
+		inst.changeBorderColor((1, 0, 0, 1))
+
+		self.parent.editor.display.image_display.setImage(
+			self.dataset.images[key]
+		)
+
+
+
 class PreviewThumbnail(ButtonBehavior, CustomBoxLayout):
-	def __init__(self, dataset, key, *args, **kwargs):
+	def __init__(self, dataset, key, parent, *args, **kwargs):
 		super(PreviewThumbnail, self).__init__(*args, **kwargs)
+
+		self._parent_obj = parent
+		self.key         = key
 
 		self.label = Label(
 			text=key, 
@@ -77,13 +96,18 @@ class PreviewThumbnail(ButtonBehavior, CustomBoxLayout):
 			height=20,
 			size_hint_x=1
 		)
+
+		# For some reason the texture inside this inherits some of
+		# its color from the background. We need to make it white for
+		# the image to display correctly.
 		self.image_holder = ImageHolder(
 			dataset.thumbnails[key], 
 			dataset.thumbnail_size,
 			size_hint_y = None,
 			size_hint_x = None,
 			height      = dataset.thumbnail_size[1],
-			width       = dataset.thumbnail_size[0]
+			width       = dataset.thumbnail_size[0],
+			color       = (1, 1, 1, 1)
 		)
 
 		self.add_widget(self.label)
@@ -92,7 +116,8 @@ class PreviewThumbnail(ButtonBehavior, CustomBoxLayout):
 		self.bind(on_release=self._clicked)
 
 	def _clicked(self, instance):
-		self.changeBorderColor((1, 0, 0, 1))
+		self._parent_obj.setSelected(self, self.key)
+		
 
 
 class ImageHolder(CustomBoxLayout):

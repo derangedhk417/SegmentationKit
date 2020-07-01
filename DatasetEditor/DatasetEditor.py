@@ -28,6 +28,7 @@ from CustomBoxLayout  import CustomBoxLayout
 from FileChooserPopup import FileChooserPopup
 from Dataset          import Dataset
 from PreviewPane      import PreviewPane
+from ImageDisplay     import ImageDisplay
 
 # ---------------------------------------------------------
 # Simple Interface Components
@@ -112,16 +113,22 @@ class TopMenu(CustomBoxLayout):
 	def _open_pressed(self, instance):
 		self.load_popup.open()
 
-
-
 # This is the interface item that displays the image that is
 # being edited, as well as some of the editing controls.
 class Display(CustomBoxLayout):
 	def __init__(self, *args, **kwargs):
 		super(Display, self).__init__(*args, **kwargs)
 
-		self.label = Label(text='display')
-		self.add_widget(self.label)
+		self.image_display       = ImageDisplay(
+			orientation='vertical'
+		)
+		self.toolbar_placeholder = Label(
+			text='Toolbar Placeholder',
+			size_hint_y=None,
+			height=50
+		)
+		self.add_widget(self.image_display)
+		self.add_widget(self.toolbar_placeholder)
 
 # This contains the interface components that allow the user to select
 # the class of the current contour that they are editing. This also
@@ -139,16 +146,15 @@ class Editor(CustomBoxLayout):
 	def __init__(self, *args, **kwargs):
 		super(Editor, self).__init__(*args, **kwargs)
 
-		self.splitter = Splitter(
-			sizable_from = 'right',
-			strip_size   = '7pt',
-			min_size     = 100,
-			max_size     = 10000
+		
+		self.display       = Display(
+			orientation='vertical',
+			border=(0, 0, 1, 0)
 		)
-		self.display       = Display()
-		self.class_summary = ClassSummary()
-		self.splitter.add_widget(self.display)
-		self.add_widget(self.splitter)
+		self.class_summary = ClassSummary(
+			size_hint_x=None, width=200
+		)
+		self.add_widget(self.display)
 		self.add_widget(self.class_summary)	
 
 # Parent component for the preview pane and the editor.
@@ -162,9 +168,7 @@ class Interface(CustomBoxLayout):
 			width=200,
 			border=(0, 0, 1, 0)
 		)
-		self.editor = Editor(
-			size_hint_x=4
-		)
+		self.editor = Editor()
 		self.add_widget(self.preview_pane)
 		self.add_widget(self.editor)
 
@@ -183,6 +187,7 @@ class DatasetEditor(App):
 			height=40, 
 			size_hint_y=None,
 			padding=[5, 5, 5, 5],
+			spacing=5,
 			border=(0, 0, 0, 1),
 			parent=self
 		)

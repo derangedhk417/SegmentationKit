@@ -92,8 +92,13 @@ class Dataset:
 	# Buffers have to have a specific layout in memory for opengl to 
 	# display them. This function will set that up.
 	def _setupThumbnailBuffer(self, img):
-		thumbnail = cv2.resize(img, tuple(self.thumbnail_size))
-		thumbnail = np.rot90(np.rot90(thumbnail))
+		thumbnail = cv2.resize(
+			img, 
+			tuple(self.thumbnail_size), 
+			interpolation=cv2.INTER_NEAREST
+		)
+		thumbnail = np.fliplr(np.rot90(np.rot90(thumbnail)))
+
 		thumbnail = memoryview(thumbnail.flatten())
 
 		return thumbnail

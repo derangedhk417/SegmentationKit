@@ -3,13 +3,14 @@
 #              adding background color and a colored border as optional 
 #              parameters.
 
-from kivy.app             import App
-from kivy.uix.boxlayout   import BoxLayout
-from kivy.graphics        import Rectangle, Color, Line
+from kivy.app              import App
+from kivy.uix.boxlayout    import BoxLayout
+from kivy.graphics         import Rectangle, Color, Line
+from kivy.uix.floatlayout  import FloatLayout
 
 from kivy.utils import get_color_from_hex as hex_color
 
-class CustomBoxLayout(BoxLayout):
+class CustomFloatLayout(FloatLayout):
 	def __init__(self, *args, **kwargs):
 		if 'color' in kwargs:
 			self.background_color = kwargs['color']
@@ -32,7 +33,7 @@ class CustomBoxLayout(BoxLayout):
 		else:
 			self.border = (0, 0, 0, 0)
 
-		super(CustomBoxLayout, self).__init__(*args, **kwargs)
+		super(CustomFloatLayout, self).__init__(*args, **kwargs)
 
 		with self.canvas.before:
 			Color(*self.border_color)
