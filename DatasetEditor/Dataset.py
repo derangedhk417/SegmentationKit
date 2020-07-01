@@ -6,8 +6,8 @@ import os
 import sys
 import code
 import cv2
-import numpy
 import json
+import numpy as np
 
 class Dataset:
 	def __init__(self, ext=None):
@@ -16,8 +16,9 @@ class Dataset:
 		else:
 			self.valid_extensions = ext
 
-	def loadDirectory(self, path, update_callback):
-		self.root_path = path
+	def loadDirectory(self, path, thumbnail_size, update_callback):
+		self.root_path      = path
+		self.thumbnail_size = thumbnail_size
 
 		# Load a list of files and filter out anything that isn't
 		# an image.
@@ -26,7 +27,6 @@ class Dataset:
 		files = [f for f in files if f.split('.')[-1] in self.valid_extensions]
 
 		n_files = len(files)
-		print(n_files)
 		f_idx   = 0
 
 		# Figure out if there is a meta.json file in the diretory.
@@ -37,7 +37,8 @@ class Dataset:
 		else:
 			self.meta_structure = {'entries':{}, 'classes':{}}
 
-		self.images = {}
+		self.images     = {}
+		self.thumbnails = {}
 
 		# Now we load everything that is in the meta structure.
 		# Once that is done, we load any additional files.
@@ -56,7 +57,11 @@ class Dataset:
 					"Could not load file \'%s\'"%img_path
 				) from ex
 
-			self.images['k'] = img
+			
+			self.images[k]     = img
+			self.thumbnails[k] = self._setupThumbnailBuffer(img)
+
+
 
 			f_idx += 1
 			update_callback(f_idx / n_files)
@@ -73,7 +78,8 @@ class Dataset:
 						"Could not load file \'%s\'"%img_path
 					) from ex
 
-				self.images[file] = img
+				self.images[file]         = img
+				self.thumbnails[file]     = self._setupThumbnailBuffer(img)
 				self.meta_structure[file] = {'class_idx': -1, 'comment': ''}
 
 				f_idx += 1
@@ -83,6 +89,14 @@ class Dataset:
 		# the meta structure should be setup.
 		return self
 
+	# Buffers have to have a specific layout in memory for opengl to 
+	# display them. This function will set that up.
+	def _setupThumbnailBuffer(self, img):
+		thumbnail = cv2.resize(img, tuple(self.thumbnail_size))
+		thumbnail = np.rot90(np.rot90(thumbnail))
+		thumbnail = memoryview(thumbnail.flatten())
+
+		return thumbnail
 
 	def _loadMetaFile(self, path):
 		with open(path, 'r') as file:

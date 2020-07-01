@@ -48,6 +48,17 @@ class CustomBoxLayout(BoxLayout):
 			pos=self._update_rect
 		)
 
+	def changeBorderColor(self, color):
+		self.border_color = color
+		with self.canvas.before:
+			Color(*self.border_color)
+			self.border_rect = Rectangle(size=self.size, pos=self.pos)
+
+			Color(*self.background_color)
+			p, s = self._get_background_rect(self.pos, self.size)
+
+			self.rect = Rectangle(pos=p, size=s)
+
 	def _update_rect(self, instance, value):
 		self.border_rect.pos  = instance.pos
 		self.border_rect.size = instance.size

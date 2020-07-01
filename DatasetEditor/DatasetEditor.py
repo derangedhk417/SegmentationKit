@@ -18,6 +18,8 @@ from kivy.config          import Config
 from kivy.clock           import Clock
 from kivy.utils           import get_color_from_hex as hex_color
 
+
+
 import code
 import os
 import threading
@@ -25,6 +27,7 @@ import threading
 from CustomBoxLayout  import CustomBoxLayout
 from FileChooserPopup import FileChooserPopup
 from Dataset          import Dataset
+from PreviewPane      import PreviewPane
 
 # ---------------------------------------------------------
 # Simple Interface Components
@@ -55,13 +58,26 @@ class TopMenu(CustomBoxLayout):
 
 		# TODO: Encapsulate this kind of functionality in a reusable class.
 		def load_files(path):
-			print("Loading: %s"%path)
+			thumbnail_width = self._parent_obj.interface.preview_pane.getCorrectImageWidth()
+
+			# Assume the images are 16:9, which is the most common format.
+			# We need to resize them so their width matches the preview
+			# pane width.
+			thumbnail_size    = [int(thumbnail_width), 0]
+			thumbnail_size[1] = int((9 / 16) * thumbnail_size[0])
+
 			self.load_progress.opacity = 1
 
 			def _inner_load(path):
+
 				def progress_callback(n):
 					self.current_progress = int(n * 100)
-				dataset = Dataset().loadDirectory(path, progress_callback)
+
+				dataset = Dataset().loadDirectory(
+					path, 
+					thumbnail_size, 
+					progress_callback
+				)
 				self._parent_obj.dataset = dataset
 				
 			t = threading.Thread(target=_inner_load, args=(path,))
@@ -72,8 +88,11 @@ class TopMenu(CustomBoxLayout):
 				if not t.is_alive():
 					Clock.unschedule(_check_process)
 					self.load_progress.opacity = 0
+					self._parent_obj.interface.preview_pane.loadThumbnails(
+						self._parent_obj.dataset
+					)
 
-			Clock.schedule_interval(_check_process, .1)
+			Clock.schedule_interval(_check_process, .025)
 
 			
 
@@ -93,14 +112,7 @@ class TopMenu(CustomBoxLayout):
 	def _open_pressed(self, instance):
 		self.load_popup.open()
 
-# This is the list of images at the left of the screen that
-# can be scrolled through to select an image to edit.
-class PreviewPane(CustomBoxLayout):
-	def __init__(self, *args, **kwargs):
-		super(PreviewPane, self).__init__(*args, **kwargs)
 
-		self.label = Label(text='Preview Pane')
-		self.add_widget(self.label)
 
 # This is the interface item that displays the image that is
 # being edited, as well as some of the editing controls.
@@ -146,7 +158,8 @@ class Interface(CustomBoxLayout):
 
 		self.preview_pane = PreviewPane(
 			orientation='vertical', 
-			size_hint_x=1,
+			size_hint_x=None,
+			width=200,
 			border=(0, 0, 1, 0)
 		)
 		self.editor = Editor(
