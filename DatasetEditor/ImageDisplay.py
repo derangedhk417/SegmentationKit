@@ -58,6 +58,7 @@ class ImageManager(ButtonBehavior, CustomFloatLayout):
 		self.current_zoom_rect_obj = None
 
 		self.current_zoom_subarray = None
+		self.last_zoom_coordinates = None
 
 
 	def posInRect(self, pos, rpos, rsize):
@@ -77,8 +78,6 @@ class ImageManager(ButtonBehavior, CustomFloatLayout):
 		if in_rect:
 			if self.parent.is_zooming:
 				Window.set_system_cursor('crosshair')
-			elif self.parent.is_panning:
-				Window.set_system_cursor('size_nwse')
 		else:
 			Window.set_system_cursor('arrow')
 
@@ -93,9 +92,7 @@ class ImageManager(ButtonBehavior, CustomFloatLayout):
 			(self.display_width, self.display_height)
 		)
 
-		if in_rect:
-			if self.parent.is_zooming:
-				print("Starting zoom")
+		if in_rect and self.is_loaded:
 			self.click_down = True
 			self.drag_start = Window.mouse_pos
 
@@ -112,8 +109,6 @@ class ImageManager(ButtonBehavior, CustomFloatLayout):
 		)
 
 		if in_rect and self.parent.is_zooming:
-			if self.parent.is_zooming:
-				print("Ending Zoom")
 			# See if they selected a reasonably large area.
 			if np.abs(self.drag_w * self.drag_h) > 16:
 				# The selected at least a 4x4 region, consider this a zoom in.
@@ -140,8 +135,6 @@ class ImageManager(ButtonBehavior, CustomFloatLayout):
 				self.drag_start            = (0, 0)
 				self.drag_w                = 0
 				self.drag_h                = 0
-
-
 
 	def _move(self, inst, val):
 		if self.click_down:
@@ -258,6 +251,10 @@ class ImageManager(ButtonBehavior, CustomFloatLayout):
 			:
 		]
 
+		self.last_zoom_coordinates = [
+			x0_idx, x1_idx, y0_idx, y1_idx
+		]
+
 		self.img_size = (
 			self.current_zoom_subarray.shape[1],
 			self.current_zoom_subarray.shape[0]
@@ -285,8 +282,9 @@ class ImageManager(ButtonBehavior, CustomFloatLayout):
 		self._resize(self.size, self.pos)
 
 	def reset(self):
-		self.current_zoom_subarray = None
-		self.setImage(self.img)
+		if self.is_loaded:
+			self.current_zoom_subarray = None
+			self.setImage(self.img)
 
 
 	# Takes a numpy/cv2 image and displays it.
@@ -331,12 +329,6 @@ class ImageDisplay(ButtonBehavior, CustomBoxLayout):
 			width=70
 		)
 
-		self.pan_button = Button(
-			text='Pan',
-			size_hint_x=None,
-			size_hint_y=1,
-			width=70
-		)
 
 		self.reset_button = Button(
 			text='Reset',
@@ -345,7 +337,6 @@ class ImageDisplay(ButtonBehavior, CustomBoxLayout):
 			width=70
 		)
 
-		self.toolbar.add_widget(self.pan_button)
 		self.toolbar.add_widget(self.zoom_button)
 		self.toolbar.add_widget(self.reset_button)
 
@@ -359,11 +350,9 @@ class ImageDisplay(ButtonBehavior, CustomBoxLayout):
 		self.add_widget(self.image_manager)
 
 		self.zoom_button.bind(on_press=self._zoom_pressed)
-		self.pan_button.bind(on_press=self._pan_pressed)
 		self.reset_button.bind(on_press=self._reset_pressed)
 
 		self.is_zooming = False
-		self.is_panning = False
 
 	def _reset_pressed(self, inst):
 		self.image_manager.reset()
@@ -376,19 +365,8 @@ class ImageDisplay(ButtonBehavior, CustomBoxLayout):
 			self.saved_color = self.zoom_button.background_color
 			self.zoom_button.background_color = hex_color('#616161')
 			self.is_zooming = True
-			self.is_panning = False
-			self.pan_button.background_color = self.saved_color
 
-	def _pan_pressed(self, inst):
-		if self.is_panning:
-			self.is_panning = False
-			self.pan_button.background_color = self.saved_color
-		else:
-			self.saved_color = self.pan_button.background_color
-			self.pan_button.background_color = hex_color('#616161')
-			self.is_panning = True
-			self.is_zooming = False
-			self.zoom_button.background_color = self.saved_color
+	
 
 	def setImage(self, img):
 		self.image_manager.setImage(img)
