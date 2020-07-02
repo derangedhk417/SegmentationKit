@@ -18,8 +18,6 @@ from kivy.config          import Config
 from kivy.clock           import Clock
 from kivy.utils           import get_color_from_hex as hex_color
 
-
-
 import code
 import os
 import threading

@@ -82,7 +82,6 @@ class PreviewPane(CustomBoxLayout):
 		)
 
 
-
 class PreviewThumbnail(ButtonBehavior, CustomBoxLayout):
 	def __init__(self, dataset, key, parent, *args, **kwargs):
 		super(PreviewThumbnail, self).__init__(*args, **kwargs)
