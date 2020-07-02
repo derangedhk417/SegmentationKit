@@ -150,7 +150,7 @@ class Editor(CustomBoxLayout):
 			border=(0, 0, 1, 0)
 		)
 		self.class_summary = ClassSummary(
-			size_hint_x=None, width=200
+			size_hint_x=None, width=250
 		)
 		self.add_widget(self.display)
 		self.add_widget(self.class_summary)	
