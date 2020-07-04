@@ -423,16 +423,16 @@ class ImageManager(ButtonBehavior, CustomFloatLayout):
 			to_zoom = self.img
 
 		# Convert screen coordinates to array indices
-		x0_idx = int((x0 / self.display_width) * to_zoom.shape[1])
-		x1_idx = int((x1 / self.display_width) * to_zoom.shape[1])
-		y0_idx = int((y0 / self.display_height) * to_zoom.shape[0])
-		y1_idx = int((y1 / self.display_height) * to_zoom.shape[0])
+		x0_idx = int(round((x0 / self.display_width) * to_zoom.shape[1]))
+		x1_idx = int(round((x1 / self.display_width) * to_zoom.shape[1]))
+		y0_idx = int(round((y0 / self.display_height) * to_zoom.shape[0]))
+		y1_idx = int(round((y1 / self.display_height) * to_zoom.shape[0]))
 
 		# Account for the different coordinate system. Arrays grow
 		# from top to bottom in their first dimension, while kivy screen
 		# coordinates are in the first cartesian quandrant.
-		y0_idx = to_zoom.shape[0] - y0_idx
-		y1_idx = to_zoom.shape[0] - y1_idx
+		y0_idx = to_zoom.shape[0] - y0_idx - 1
+		y1_idx = to_zoom.shape[0] - y1_idx - 1
 
 		self.current_zoom_subarray = to_zoom[
 			y1_idx:y0_idx + 1,
@@ -441,8 +441,8 @@ class ImageManager(ButtonBehavior, CustomFloatLayout):
 		]
 
 		if self.last_zoom is not None:
-			x0_idx = (x0 / self.display_width)  * to_zoom.shape[1]
-			y0_idx = (y0 / self.display_height) * to_zoom.shape[0]
+			x0_idx = int(round((x0 / self.display_width)  * to_zoom.shape[1]))
+			y0_idx = int(round((y0 / self.display_height) * to_zoom.shape[0]))
 			old_x0_idx, old_x1_idx, old_y0_idx, old_y1_idx = self.last_zoom
 
 			x0_idx += old_x0_idx
@@ -452,10 +452,9 @@ class ImageManager(ButtonBehavior, CustomFloatLayout):
 				x0_idx, x1_idx, y0_idx, y1_idx
 			]
 		else:
-			x0_idx = (x0 / self.display_width)  * to_zoom.shape[1]
-			y0_idx = (y0 / self.display_height) * to_zoom.shape[0]
+			x0_idx = int(round((x0 / self.display_width)  * to_zoom.shape[1]))
+			y0_idx = int(round((y0 / self.display_height) * to_zoom.shape[0]))
 			y0_idx = to_zoom.shape[0] - y0_idx
-			y1_idx = to_zoom.shape[0] - y1_idx
 			self.last_zoom = [
 				x0_idx, x1_idx, y0_idx, y1_idx
 			]
