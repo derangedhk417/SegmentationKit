@@ -15,7 +15,8 @@ from kivy.uix.button       import Button
 from kivy.uix.floatlayout  import FloatLayout
 from kivy.core.window      import Window
 
-from kivy.graphics.stencil_instructions import StencilPush, StencilUse, StencilUnUse, StencilPop
+from kivy.graphics.stencil_instructions import StencilPush, StencilUse
+from kivy.graphics.stencil_instructions import StencilPop, StencilUnUs
 from kivy.utils                         import get_color_from_hex as hex_color
 
 from Dataset           import Dataset
@@ -24,6 +25,12 @@ from CustomFloatLayout import CustomFloatLayout
 
 import numpy as np
 import code
+
+# Relative Coordinates: Coordinates in the range [0.0, 1.0], that correspond
+# to positions in the image being displayed.
+# Example: With an image that has dimensions (height: 300, width: 600), 
+# relative coordinates (0.5, 0.5) would correspond to x_pixel: 150,
+# y_pixel: 300. 
 
 # Handles the acttual sizing and drawing of the image rectangle, as well as 
 # drawing the zoom rectangle and cropping the image when zooming. The click
@@ -160,6 +167,7 @@ class ImageManager(ButtonBehavior, CustomFloatLayout):
 			(self.display_width, self.display_height)
 		)
 
+		# See if we need to execute a zoom.
 		if in_rect and self.parent.is_zooming:
 			# See if they selected a reasonably large area.
 			if np.abs(self.drag_w * self.drag_h) > 16:
@@ -187,6 +195,8 @@ class ImageManager(ButtonBehavior, CustomFloatLayout):
 				self.drag_start            = (0, 0)
 				self.drag_w                = 0
 				self.drag_h                = 0
+		# If a zoom operation hasn't overriden the functionality, see if we need
+		# to place a contour point.
 		elif in_rect and self.parent.is_editing_contour:
 			# Calculate where the contour is in image coordinates (cartesian)
 			x, y = self.screenCoordinatesToRelativeCoordinates(val.pos[0], val.pos[1])
@@ -196,6 +206,9 @@ class ImageManager(ButtonBehavior, CustomFloatLayout):
 			# and then this classes pushLine method to add the newly updates contour.
 			self.parent.addPointToContour(x, y)
 
+	# Converts coordinates on the screen (relative to the bottom left corner
+	# of the window) to relative coordinates in the image. See: Relative Coordinates
+	# at the top of this file.
 	def screenCoordinatesToRelativeCoordinates(self, x, y):
 		if self.last_zoom is not None:
 			x0_idx, x1_idx, y0_idx, y1_idx = self.last_zoom
@@ -214,8 +227,8 @@ class ImageManager(ButtonBehavior, CustomFloatLayout):
 		return xr, yr
 
 	# Given a set of coordinates from 0.0 to 1.0, scaled to the width
-	# and height of the currently loaded image, this function will 
-	# return where on the screen those coordinates lie.
+	# and height of the currently loaded image (relative coordinates), this 
+	# function will return where on the screen those coordinates lie.
 	def relativeCoordinatesToScreenCoordinates(self, x, y):
 		if self.last_zoom is not None:
 			x0_idx, x1_idx, y0_idx, y1_idx = self.last_zoom
@@ -240,6 +253,9 @@ class ImageManager(ButtonBehavior, CustomFloatLayout):
 				self.relativeCoordinatesToScreenCoordinates(x, y)
 			)
 
+		# The stencil operations referenced here ensure that the contours do not
+		# draw outside the image. Without these, the contours would be all over the 
+		# place when zooming in (unless manual clipping was implemented).
 		isg.add(StencilPush())
 		isg.add(Rectangle(
 			pos=(self.display_x, self.display_y),
@@ -270,6 +286,9 @@ class ImageManager(ButtonBehavior, CustomFloatLayout):
 		self.colors.remove(self.colors[-1])
 		self.lines.remove(self.lines[-1])
 
+	# Updates the graphics objects used to render the contours. Does not 
+	# update the underlying "lines" array. This is meant to store ground
+	# truth coordinates, not on screen coordinates.
 	def updateContoursForZoom(self):
 		# We need to update all of the rectangles in the canvas that pertain
 		# to drawing contours.
@@ -290,6 +309,10 @@ class ImageManager(ButtonBehavior, CustomFloatLayout):
 					self.relativeCoordinatesToScreenCoordinates(x, y)
 				])
 
+			# The stencil operations referenced here ensure that the contours 
+			# do not draw outside the image. Without these, the contours would 
+			# be all over the place when zooming in (unless manual clipping was
+			# implemented).
 			isg.add(StencilPush())
 			isg.add(Rectangle(
 				pos=(self.display_x, self.display_y),
@@ -440,6 +463,9 @@ class ImageManager(ButtonBehavior, CustomFloatLayout):
 			:
 		]
 
+		# This is ugly, but necessary to ensure that successive zoom operations
+		# are tracked. The self.last_zoom variable produced by this block is used
+		# to calculate conversions between screen and relative coordinates.
 		if self.last_zoom is not None:
 			x0_idx = int(round((x0 / self.display_width)  * to_zoom.shape[1]))
 			y0_idx = int(round((y0 / self.display_height) * to_zoom.shape[0]))
@@ -556,7 +582,8 @@ class ImageDisplay(ButtonBehavior, CustomBoxLayout):
 		)
 
 		# This will store the geometry for any contours drawn on the image
-		# by the user. Each contour will be stored as (color, [[x0, y0], [x1, y1, ...]])
+		# by the user. Each contour will be stored as 
+		# (color, [[x0, y0], [x1, y1, ...]])
 		# The image_manager object will internally manage the graphics
 		# objects necessary to draw these.
 		self.contours = []
@@ -598,6 +625,7 @@ class ImageDisplay(ButtonBehavior, CustomBoxLayout):
 
 	def _contour_pressed(self, inst):
 		if self.is_editing_contour:
+			# This closes the contour.
 			self.addPointToContour(*self.current_contour[0])
 
 			self.is_editing_contour  = False
