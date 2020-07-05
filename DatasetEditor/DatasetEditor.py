@@ -27,6 +27,7 @@ from FileChooserPopup import FileChooserPopup
 from Dataset          import Dataset
 from PreviewPane      import PreviewPane
 from ImageDisplay     import ImageDisplay
+from ClassSummary     import ClassSummary
 
 # ---------------------------------------------------------
 # Simple Interface Components
@@ -128,15 +129,8 @@ class Display(CustomBoxLayout):
 		self.add_widget(self.image_display)
 		self.add_widget(self.toolbar_placeholder)
 
-# This contains the interface components that allow the user to select
-# the class of the current contour that they are editing. This also
-# contains functionality for adding new classes.
-class ClassSummary(CustomBoxLayout):
-	def __init__(self, *args, **kwargs):
-		super(ClassSummary, self).__init__(*args, **kwargs)
 
-		self.label = Label(text='class summary')
-		self.add_widget(self.label)
+		
 
 # This is the parent component for the images display and the class
 # summary.
@@ -150,7 +144,8 @@ class Editor(CustomBoxLayout):
 			border=(0, 0, 1, 0)
 		)
 		self.class_summary = ClassSummary(
-			size_hint_x=None, width=250
+			size_hint_x=None, width=250,
+			orientation='vertical'
 		)
 		self.add_widget(self.display)
 		self.add_widget(self.class_summary)	

@@ -5,7 +5,7 @@
 
 from kivy.app             import App
 from kivy.uix.boxlayout   import BoxLayout
-from kivy.graphics        import Rectangle, Color, Line
+from kivy.graphics        import Rectangle, Color, Line, InstructionGroup
 
 from kivy.utils import get_color_from_hex as hex_color
 
@@ -34,33 +34,45 @@ class CustomBoxLayout(BoxLayout):
 
 		super(CustomBoxLayout, self).__init__(*args, **kwargs)
 
-		with self.canvas.before:
-			Color(*self.border_color)
-			self.border_rect = Rectangle(size=self.size, pos=self.pos)
-
-			Color(*self.background_color)
-			p, s = self._get_background_rect(self.pos, self.size)
-
-			self.rect = Rectangle(pos=p, size=s)
+		self.draw_instructions = None
+		self.updateDraw()
 
 		self.bind(
 			size=self._update_rect, 
 			pos=self._update_rect
 		)
 
+	def updateDraw(self):
+		if self.draw_instructions is not None:
+			self.canvas.before.remove(self.draw_instructions)
+
+		self.draw_instructions = InstructionGroup()
+
+		self.draw_instructions.add(Color(*self.border_color))
+		self.border_rect = Rectangle(size=self.size, pos=self.pos)
+		self.draw_instructions.add(self.border_rect)
+		self.draw_instructions.add(Color(*self.background_color))
+		p, s = self._get_background_rect(self.pos, self.size)
+		self.rect = Rectangle(pos=p, size=s)
+		self.draw_instructions.add(self.rect)
+
+		self.canvas.before.add(self.draw_instructions)
+
+	def updateColor(self, color):
+		if color is None:
+			self.background_color = hex_color("#333333")
+		else:
+			self.background_color = color
+
+		self.updateDraw()
+
 	def changeBorderColor(self, color):
 		if color is None:
 			self.border_color = hex_color("#595959")
 		else:
 			self.border_color = color
-		with self.canvas.before:
-			Color(*self.border_color)
-			self.border_rect = Rectangle(size=self.size, pos=self.pos)
 
-			Color(*self.background_color)
-			p, s = self._get_background_rect(self.pos, self.size)
-
-			self.rect = Rectangle(pos=p, size=s)
+		self.updateDraw()
 
 	def _update_rect(self, instance, value):
 		self.border_rect.pos  = instance.pos

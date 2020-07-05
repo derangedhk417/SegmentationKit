@@ -16,12 +16,11 @@ from kivy.uix.floatlayout  import FloatLayout
 from kivy.core.window      import Window
 
 from kivy.graphics.stencil_instructions import StencilPush, StencilUse
-from kivy.graphics.stencil_instructions import StencilPop, StencilUnUs
+from kivy.graphics.stencil_instructions import StencilPop, StencilUnUse
 from kivy.utils                         import get_color_from_hex as hex_color
 
 from Dataset           import Dataset
 from CustomBoxLayout   import CustomBoxLayout
-from CustomFloatLayout import CustomFloatLayout
 
 import numpy as np
 import code
@@ -38,7 +37,7 @@ import code
 # class. The parent object (ImageDisplay), handles the setting and unsetting
 # of the is_zooming flag, which this class will read when determining how to 
 # interpret user inputs.
-class ImageManager(ButtonBehavior, CustomFloatLayout):
+class ImageManager(ButtonBehavior, CustomBoxLayout):
 	def __init__(self, *args, **kwargs):
 		# Read the padding argument from the user and adhere to it.
 		# It will interfere with normal operation of the FloatLayout constructor,
