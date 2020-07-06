@@ -49,23 +49,6 @@ class ClassSummary(CustomBoxLayout):
 			height=30
 		)
 
-		self.class0_button = Button(
-			text='class 0', size_hint_y=None, height=30
-		)
-		self.class1_button = Button(
-			text='class 1', size_hint_y=None, height=30
-		)
-		self.class2_button = Button(
-			text='class 2', size_hint_y=None, height=30
-		)
-		self.class_select_dropdown.add_widget(self.class0_button)
-		self.class_select_dropdown.add_widget(self.class1_button)
-		self.class_select_dropdown.add_widget(self.class2_button)
-
-		self.class0_button.bind(on_press=self._class_selected)
-		self.class1_button.bind(on_press=self._class_selected)
-		self.class2_button.bind(on_press=self._class_selected)
-
 		self.class_select_button.bind(on_press=self._class_select_pressed)
 
 		self.name_input = TextInput(
@@ -81,10 +64,12 @@ class ClassSummary(CustomBoxLayout):
 			height=120
 		)
 
+		self.name_input.bind(text=self._name_text_changed)
+		self.comment_input.bind(text=self._comment_text_changed)
+
 		self.editor_box.add_widget(self.class_select_button)
 		self.editor_box.add_widget(self.name_input)
 		self.editor_box.add_widget(self.comment_input)
-
 
 		self.dropdown_activator = DropDownContourItem(
 			class_color=hex_color('#000000'),
@@ -92,37 +77,120 @@ class ClassSummary(CustomBoxLayout):
 			class_name='none'
 		)
 
-		self.l1 = DropDownContourItem(
-			class_color=hex_color('#FF0000'),
-			index=0,
-			class_name='Test 1'
-		)
-		self.contour_select_dropdown.add_widget(self.l1)
-
-		self.l2 = DropDownContourItem(
-			class_color=hex_color('#00FF00'),
-			index=1,
-			class_name='Test 2'
-		)
-		self.contour_select_dropdown.add_widget(self.l2)
-
-		self.l3 = DropDownContourItem(
-			class_color=hex_color('#0000FF'),
-			index=2,
-			class_name='Test 3'
-		)
-		self.contour_select_dropdown.add_widget(self.l3)
-
-		self.l1.bind(on_press=self._item_selected)
-		self.l2.bind(on_press=self._item_selected)
-		self.l3.bind(on_press=self._item_selected)
-
 		self.dropdown_activator.bind(on_press=self._activator_pressed)
 
 		self.add_widget(self.dropdown_activator)
 		self.add_widget(self.editor_box)
 
 		self.dropdown_open = False
+		self.current_entry = None
+		self.dataset       = None
+		self.contours               = []
+		self.contour_dropdown_items = []
+		self.current_contour        = None
+		self.class_names            = []
+		self.class_buttons          = []
+
+	def _name_text_changed(self, inst, val):
+		self.current_contour['name'] = val
+
+	def _comment_text_changed(self, inst, val):
+		self.current_contour['comment'] = val
+
+	def writeChangesToMemory(self):
+		if self.current_entry is None:
+			raise Exception("Nothing is currently being edited.")
+
+		entry = self.dataset.meta_structure['entries'][self.current_key]
+		for idx, contour in enumerate(self.contours):
+			entry[idx]['class_idx'] = contour['class_idx']
+			entry[idx]['name']      = contour['name']
+			entry[idx]['comment']   = contour['comment']
+
+	def clearCurrentEntry(self):
+		if self.current_entry is not None:
+			for item in self.contour_dropdown_items:
+				self.contour_select_dropdown.remove_widget(item)
+
+		self.contours               = []
+		self.contour_dropdown_items = []
+
+	def addContour(self, contour):
+		item_class_idx   = contour['class_idx']
+		item_class_color = self.dataset.meta_structure['classes'][item_class_idx]['color']
+		item_class_name  = self.dataset.meta_structure['classes'][item_class_idx]['name']
+
+		proper_name = item_class_name
+		if contour['name'] != '':
+			if not contour['name'].isspace():
+				proper_name = self.current_contour['name']
+
+		dropdown_item = DropDownContourItem(
+			class_color=item_class_color,
+			index=item_class_idx,
+			class_name=proper_name
+		)
+		self.contour_select_dropdown.add_widget(dropdown_item)
+		dropdown_item.bind(on_press=self._item_selected)
+
+		self.contours.append(contour)
+		self.contour_dropdown_items.append(dropdown_item)
+
+	def setCurrentContour(self, contour):
+		self.current_contour = contour
+		item_class_idx   = contour['class_idx']
+		item_class_color = self.dataset.meta_structure['classes'][item_class_idx]['color']
+		item_class_name  = self.dataset.meta_structure['classes'][item_class_idx]['name']
+
+		proper_name = item_class_name
+		if self.current_contour['name'] != '':
+			if not self.current_contour['name'].isspace():
+				proper_name = self.current_contour['name']
+
+		self.dropdown_activator.setProperties(
+			item_class_color, item_class_idx, proper_name
+		)
+
+		self.name_input.text          = contour['name']
+		self.comment_input.text       = contour['comment']
+		self.class_select_button.text = item_class_name
+
+		self.contour_select_dropdown.dismiss()
+		self.dropdown_open = False
+
+	def populateClassDropdown(self):
+		for button in self.class_buttons:
+			self.class_select_dropdown.remove_widget(button)
+
+		self.class_names   = []
+		self.class_buttons = []
+		for _class in self.dataset.meta_structure['classes']:
+			self.class_names.append(_class['name'])
+			button = Button(
+				text=_class['name'], size_hint_y=None, height=30
+			)
+			self.class_buttons.append(button)
+			self.class_select_dropdown.add_widget(button)
+			button.bind(on_press=self._class_selected)
+
+	def setCurrentEntry(self, key, dataset):
+		if self.current_entry is not None:
+			self.clearCurrentEntry()
+
+
+		self.dataset       = dataset
+		self.current_entry = self.dataset.meta_structure['entries'][key]
+		self.current_key   = key
+
+		self.populateClassDropdown()
+
+		# Add each of these to the internal structure, and therefore the
+		# image display.
+		for contour in self.current_entry:
+			self.addContour(contour)
+
+		if len(self.current_entry) > 0:
+			self.setCurrentContour(self.current_entry[0])
 
 	def _activator_pressed(self, inst):
 		if not self.dropdown_open:
@@ -137,16 +205,37 @@ class ClassSummary(CustomBoxLayout):
 
 	def _class_selected(self, inst):
 		self.class_select_button.text = inst.text
+		self.current_contour['class_idx'] = self.class_names.index(inst.text)
 		self.class_select_dropdown.dismiss()
 
+		# We need to change the item in the dropdown list of contours to match.
+		class_idx   = self.class_names.index(inst.text)
+		contour_idx = self.contours.index(self.current_contour)
+		item_class_color = self.dataset.meta_structure['classes'][class_idx]['color']
+		item_class_name  = self.dataset.meta_structure['classes'][class_idx]['name']
 
-	def _item_selected(self, inst):
-		self.dropdown_activator.setProperties(
-			inst.class_color, inst.index, inst.class_name
+		proper_name = item_class_name
+		if self.current_contour['name'] != '':
+			if not self.current_contour['name'].isspace():
+				proper_name = self.current_contour['name']
+
+		self.contour_dropdown_items[contour_idx].setProperties(
+			item_class_color, self.class_names.index(inst.text), proper_name
 		)
 
-		self.contour_select_dropdown.dismiss()
-		self.dropdown_open = False
+		self.dropdown_activator.setProperties(
+			item_class_color, self.class_names.index(inst.text), proper_name
+		)
+
+		self.parent.display.image_display.setContourColor(contour_idx, item_class_color)
+
+	def _item_selected(self, inst):
+		idx = self.contour_dropdown_items.index(inst)
+		contour = self.contours[idx]
+
+		self.setCurrentContour(contour)
+
+		
 
 # This is a custom listbox item that displays the necessary information
 # about a contour in the list box.

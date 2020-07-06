@@ -35,7 +35,7 @@ class Dataset:
 		if os.path.isfile(self.meta_path):
 			self._loadMetaFile(self.meta_path)
 		else:
-			self.meta_structure = {'entries':{}, 'classes':{}}
+			self.meta_structure = {'entries':{}, 'classes': []}
 
 		self.images     = {}
 		self.thumbnails = {}
@@ -80,7 +80,7 @@ class Dataset:
 
 				self.images[file]         = img
 				self.thumbnails[file]     = self._setupThumbnailBuffer(img)
-				self.meta_structure[file] = {'class_idx': -1, 'comment': ''}
+				self.meta_structure['entries'][file] = []
 
 				f_idx += 1
 				update_callback(f_idx / n_files)

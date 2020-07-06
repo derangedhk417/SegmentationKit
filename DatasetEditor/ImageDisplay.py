@@ -285,6 +285,19 @@ class ImageManager(ButtonBehavior, CustomBoxLayout):
 		self.colors.remove(self.colors[-1])
 		self.lines.remove(self.lines[-1])
 
+	def clearLines(self):
+		# Get rid of the existing graphics objects.
+		for g in range(len(self.instruction_groups)):
+			self.canvas.remove(self.instruction_groups[-1])
+
+		self.instruction_groups = []
+		self.colors             = []
+		self.lines              = []
+
+	def setContourColor(self, index, color):
+		self.colors[index] = color
+		self.updateContoursForZoom()
+
 	# Updates the graphics objects used to render the contours. Does not 
 	# update the underlying "lines" array. This is meant to store ground
 	# truth coordinates, not on screen coordinates.
@@ -585,7 +598,8 @@ class ImageDisplay(ButtonBehavior, CustomBoxLayout):
 		# (color, [[x0, y0], [x1, y1, ...]])
 		# The image_manager object will internally manage the graphics
 		# objects necessary to draw these.
-		self.contours = []
+		self.contours      = []
+		self.current_entry = None
 
 		self.toolbar.add_widget(self.zoom_button)
 		self.toolbar.add_widget(self.reset_button)
@@ -619,25 +633,55 @@ class ImageDisplay(ButtonBehavior, CustomBoxLayout):
 			hex_color('#0000FF')
 		]
 
+		self.dataset       = None
+		self.current_entry = None
+
 	def _reset_pressed(self, inst):
 		self.image_manager.reset()
 
 	def _contour_pressed(self, inst):
 		if self.is_editing_contour:
-			# This closes the contour.
-			self.addPointToContour(*self.current_contour[0])
-
-			self.is_editing_contour  = False
-			self.contour_on_stack    = False
-			self.contour_button.text = 'New Contour'
-			self.contours.append((self.contour_color, self.current_contour))
+			self.finishContour()
 		else:
-			self.is_editing_contour    = True
-			self.contour_button.text   = 'Close Contour'
-			self.current_contour       = []
-			self.contour_color         = self.default_colors[
-				len(self.contours) % len(self.default_colors)
-			]
+			self.newContour()
+
+	def finishContour(self):
+		# This closes the contour.
+		self.addPointToContour(*self.current_contour[0])
+
+		self.is_editing_contour  = False
+		self.contour_on_stack    = False
+		self.contour_button.text = 'New Contour'
+		self.contours.append((self.contour_color, self.current_contour))
+
+	def newContour(self, load=False, color=None):
+		self.is_editing_contour    = True
+		self.contour_button.text   = 'Close Contour'
+		self.current_contour       = []
+		
+
+		if not load:
+			# We need to add this into the class summary as well.
+			self.parent.parent.class_summary.addContour({
+				'class_idx' : 0,
+				'name'      : '',
+				'comment'   : ''
+			})
+
+			self.contour_color = self.dataset.meta_structure['classes'][0]['color']
+		else:
+			self.contour_color = color
+
+
+	def clearContours(self):
+		self.contours           = []
+		self.current_contour    = []
+		self.is_editing_contour = False
+		self.image_manager.clearLines()
+
+	def setContourColor(self, index, color):
+		self.image_manager.setContourColor(index, color)
+
 
 	def addPointToContour(self, x, y):
 		if not self.is_editing_contour:
@@ -664,8 +708,40 @@ class ImageDisplay(ButtonBehavior, CustomBoxLayout):
 			self.zoom_button.background_color = hex_color('#616161')
 			self.is_zooming = True
 
-	def setImage(self, img):
-		self.image_manager.setImage(img)
+	def writeChangesToMemory(self):
+		if self.current_entry is None:
+			raise Exception("Nothing is currently being edited.")
+
+		self.dataset.meta_structure['entries'][self.current_key] = []
+		for contour in self.contours:
+			self.dataset.meta_structure['entries'][self.current_key].append({
+				'geometry': contour[1]
+			})
+
+
+	def setImage(self, img, dataset):
+		if self.current_entry is not None:
+			self.clearContours()
+
+		self.dataset = dataset
+		self.image_manager.setImage(self.dataset.images[img])
+
+		# Now we load the contour information out of the structure 
+		# (if there is any), and add it. 
+		self.current_entry = self.dataset.meta_structure['entries'][img]
+		self.current_key   = img
+
 		
+		# Add each of these to the internal structure, and therefore the
+		# image display.
+		for contour in self.current_entry:
+			idx   = contour['class_idx']
+			color = self.dataset.meta_structure['classes'][idx]['color']
+			self.newContour(load=True, color=color)
+			for point in contour['geometry']:
+				self.addPointToContour(*point)
+			self.finishContour()
+
+
 
 	

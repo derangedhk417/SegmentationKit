@@ -72,14 +72,20 @@ class PreviewPane(CustomBoxLayout):
 
 	def setSelected(self, inst, key):
 		if self.current_selected_obj is not None:
+			# The order of these calls is important
+			self.parent.editor.display.image_display.writeChangesToMemory()
+			self.parent.editor.class_summary.writeChangesToMemory()
 			self.current_selected_obj.changeBorderColor(None)
 		self.current_selected_key = key
 		self.current_selected_obj = inst
 		inst.changeBorderColor((1, 0, 0, 1))
 
-		self.parent.editor.display.image_display.setImage(
-			self.dataset.images[key]
-		)
+		# This will handle the image editor setup.
+		self.parent.editor.display.image_display.setImage(key, self.dataset)
+
+		# Next we update the list in the class summary.
+		self.parent.editor.class_summary.setCurrentEntry(key, self.dataset)
+
 
 
 class PreviewThumbnail(ButtonBehavior, CustomBoxLayout):
